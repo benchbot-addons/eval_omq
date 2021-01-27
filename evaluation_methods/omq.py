@@ -9,6 +9,23 @@ _IOU_TOOL = iou_tools.IoU()
 _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
 
 
+def combine(scores):
+    return create_scores(
+        task_details=scores[0]['task_details'],
+        environment_details=[s['environment_details'] for s in scores],
+        scores_omq=np.mean([s['scores']['OMQ'] for s in scores]),
+        scores_avg_pairwise=np.mean(
+            [s['scores']['avg_pairwise'] for s in scores]),
+        scores_avg_label=np.mean([s['scores']['avg_label'] for s in scores]),
+        scores_avg_spatial=np.mean(
+            [s['scores']['avg_spatial'] for s in scores]),
+        scores_avg_fp_quality=np.mean(
+            [s['scores']['avg_fp_quality'] for s in scores]),
+        scores_avg_state_quality=(np.mean([
+            s['scores']['avg_state_quality'] for s in scores
+        ]) if 'avg_state_quality' in scores[0]['scores'] else None))
+
+
 def create_scores(task_details,
                   environment_details,
                   scores_omq,

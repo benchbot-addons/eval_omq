@@ -10,4 +10,5 @@ valid_result_formats:
 valid_ground_truth_formats:
   - object_map_ground_truth
 functions:
+  combine: "omq.combine"
   evaluate: "omq.evaluate"
