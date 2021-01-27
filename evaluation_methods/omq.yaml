@@ -1,0 +1,13 @@
+name: omq
+description: |
+  OMQ (object map quality) is a measure of the quality of an object map with
+  respect to some reference object map (i.e. ground truth). Each objects
+  "quality" is calculated as a combination of the quality of its spatial
+  position, label distribution, and state distribution if applicable.
+valid_result_formats:
+  - object_map
+  - object_map_with_states
+valid_ground_truth_formats:
+  - object_map_ground_truth
+functions:
+  evaluate: "omq.evaluate"
