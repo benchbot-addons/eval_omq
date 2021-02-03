@@ -62,6 +62,27 @@ def evaluate(results, ground_truths):
 
 
 def evaluate_scd(results, ground_truths):
+    gt_changes = ([{
+        **o, 'state': 'removed'
+    } for o in ground_truths[0]['ground_truth']['objects'] not in
+                   ground_truths[1]['ground_truth']['objects']] +
+                  [{
+                      **o, 'state': 'added'
+                  } for o in ground_truths[1]['ground_truth']['objects'] not in
+                   ground_truths[0]['ground_truth']['objects']])
+    o = OMQ()
+    return create_scores(task_details=results['task_details'],
+                         environment_details=results['environment_details'],
+                         scores_omq=o.score([(gt_changes,
+                                              results['results']['objects'])]),
+                         scores_avg_pairwise=o.get_avg_overall_quality_score(),
+                         scores_avg_label=o.get_avg_label_score(),
+                         scores_avg_spatial=o.get_avg_spatial_score(),
+                         scores_avg_fp_quality=o.get_avg_fp_score())
+
+
+def evaluate_semantic_slam(results, ground_truths):
+    print(ground_truths[0]['ground_truth']['objects'][0])
     o = OMQ()
     return create_scores(task_details=results['task_details'],
                          environment_details=results['environment_details'],
@@ -73,10 +94,6 @@ def evaluate_scd(results, ground_truths):
                          scores_avg_label=o.get_avg_label_score(),
                          scores_avg_spatial=o.get_avg_spatial_score(),
                          scores_avg_fp_quality=o.get_avg_fp_score())
-
-
-def evaluate_semantic_slam(results, ground_truths):
-    pass
 
 
 # NOTE For now we will ignore the concept of foreground and background quality in favor of
