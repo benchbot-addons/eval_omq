@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import gmean
 import iou_tools
+from input_processor import InputProcessor
 
 _IOU_TOOL = iou_tools.IoU()
 _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
@@ -54,12 +55,29 @@ def create_scores(task_details,
         }
     }
 
-
 def evaluate(results, ground_truths):
+    # sort out class_ids for all ground_truths and results to ensure consistent ordering
+    # TODO should maybe not just assume that the first ground_truth has the same 
+    # class list (object_labels) as the others
+    # TODO should object_labels be part of ground_truth rather than its own thing?
+    # I thought object_labels was for segmentation visualization
+    if 'object_labels' in ground_truths[0]:
+        class_labels = ground_truths[0]['object_labels']
+    else:
+        # Worst case scenario, create class labels list from current object list
+        class_labels = [gt_obj['class'] for gt_obj in 
+                        ground_truths[0]['ground_truth']['objects']]
+    if 'synonyms' in ground_truths[0]:
+        input_processor = InputProcessor(class_labels, ground_truths[0]['synonyms'])
+    else:
+        input_processor = InputProcessor(class_labels)
+    
+    ground_truths = input_processor.process_gt(ground_truths)
+    results = input_processor.process_results(results)
+
     return (evaluate_scd if results['task_details']['results_format']
             == 'object_map_with_states' else evaluate_semantic_slam)(
                 results, ground_truths)
-
 
 def evaluate_scd(results, ground_truths):
     gt_changes = ([{
