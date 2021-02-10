@@ -61,16 +61,17 @@ def evaluate(results, ground_truths):
     # class list (object_labels) as the others
     # TODO should object_labels be part of ground_truth rather than its own thing?
     # I thought object_labels was for segmentation visualization
-    if 'object_labels' in ground_truths[0]:
-        class_labels = ground_truths[0]['object_labels']
+    if 'object_labels' in ground_truths[0]['environment']:
+        class_labels = ground_truths[0]['environment']['object_labels']
     else:
         # Worst case scenario, create class labels list from current object list
         class_labels = [gt_obj['class'] for gt_object_set in ground_truths for gt_obj in 
                         gt_object_set['ground_truth']['objects']]
         
         class_labels = list(np.unique(class_labels))
-    if 'synonyms' in ground_truths[0]:
-        input_processor = InputProcessor(class_labels, ground_truths[0]['synonyms'])
+    print("class_labels: {}".format(class_labels))
+    if 'synonyms' in ground_truths[0]['ground_truth']:
+        input_processor = InputProcessor(class_labels, ground_truths[0]['ground_truth']['synonyms'])
     else:
         input_processor = InputProcessor(class_labels)
     
