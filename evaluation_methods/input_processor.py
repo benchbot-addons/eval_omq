@@ -1,4 +1,5 @@
 import warnings
+import numpy as np
 
 _BACKGROUND_SYNONYMS = {
     'none': 'background',
@@ -22,7 +23,7 @@ class InputProcessor(object):
             raise ValueError(f"class_list has {len(background_idx)} background classes (should be 1)")
         # If there is no background class in the class list then append one to the end
         if len(background_idx) == 0:
-            self.class_list += "background"
+            self.class_list += ["background"]
         # Otherwise move the background class to the end of the list if it isn't there already
         elif background_idx[0] != len(class_list)-1:
             self.class_list += [self.class_list.pop(background_idx[0])]
@@ -39,7 +40,8 @@ class InputProcessor(object):
         return gt_data
 
     def process_results(self, results_data):
-      is_scd = results_data['task_details']['type'] == _TYPE_SCD
+      # NOTE this might not be the best thing to have
+      is_scd = _TYPE_SCD in results_data['task_details']['name']
 
       # TODO I think this has been moved elsewhere. Should check.
       # Validate the provided results data
@@ -48,34 +50,34 @@ class InputProcessor(object):
       #     Evaluator._validate_object_data(o, i, scd=is_scd)
 
       # Use the default class_list if none is provided
-      if 'class_list' not in results_data or not results_data['results']['class_list']:
+      if 'class_list' not in results_data['results'] or not results_data['results']['class_list']:
         warnings.warn(
             "No 'class_list' field provided; assuming results have used "
             "ground truth class list")
-        results_data['class_list'] = self.class_list
-
+        results_data[results]['class_list'] = self.class_list
+      
       # Sanitise all probability distributions for labels & states if
       # applicable (sanitising involves dumping unused bins to the background
       # / uncertain class, normalising the total probability to 1, &
       # optionally rearranging to match a required order)
-      for o in results_data['results']['objects']:
+      for i, o in enumerate(results_data['results']['objects']):
         if len(o['label_probs']) != len(results_data['results']['class_list']):
           raise ValueError(
               "The label probability distribution for object %d has a "
               "different length (%d) \nto the used class list (%d). " %
               (i, len(o['label_probs']), len(
                   results_data['results']['class_list'])))
-          o['label_probs'] = self._sanitise_prob_dist(
-              o['label_probs'], results_data['results']['class_list'])
+        o['label_probs'] = self._sanitise_prob_dist(
+          o['label_probs'], results_data['results']['class_list'])
         if is_scd:
           o['state_probs'] = self._sanitise_prob_dist(
               o['state_probs'])
 
-        # We have applied the ground_truth class list to the label probs, so update
-        # the class list in results_data
-        results_data['results']['class_list'] = self.class_list
+      # We have applied the ground_truth class list to the label probs, so update
+      # the class list in results_data
+      results_data['results']['class_list'] = self.class_list
 
-        return results_data
+      return results_data
 
 
     def get_nearest_class_id(self, class_name):
@@ -119,7 +121,7 @@ class InputProcessor(object):
             # list, & amalgamating all duplicate values (e.g. anything not
             # found in our list will be added to the background class)
             if current_class_list is not None:
-                new_prob_dist = [0.0] * len(self.CLASS_LIST)
+                new_prob_dist = [0.0] * len(self.class_list)
                 for i, c in enumerate(current_class_list):
                     new_prob_dist[BACKGROUND_CLASS_INDEX if self.
                                   get_nearest_class_id(c) is None else self.
