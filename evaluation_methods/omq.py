@@ -4,7 +4,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import gmean
 import iou_tools
-from input_processor import InputProcessor
+from input_processor import InputProcessor, _BACKGROUND_SYNONYMS
 
 _IOU_TOOL = iou_tools.IoU()
 _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
@@ -56,24 +56,30 @@ def create_scores(task_details,
     }
 
 def evaluate(results, ground_truths):
-    # sort out class_ids for all ground_truths and results to ensure consistent ordering
-    # TODO should maybe not just assume that the first ground_truth has the same 
-    # class list (object_labels) as the others
-    # TODO should object_labels be part of ground_truth rather than its own thing?
-    # I thought object_labels was for segmentation visualization
-    if 'object_labels' in ground_truths[0]['environment']:
-        class_labels = ground_truths[0]['environment']['object_labels']
-    else:
-        # Worst case scenario, create class labels list from current object list
-        class_labels = [gt_obj['class'] for gt_object_set in ground_truths for gt_obj in 
-                        gt_object_set['ground_truth']['objects']]
+    class_labels = []
+    synonyms = _BACKGROUND_SYNONYMS
+    for gt in ground_truths:
         
-        class_labels = list(np.unique(class_labels))
+        # sort out class_ids for all ground_truths and results to ensure consistent ordering
+        # NOTE Ideally we would want to have class_list and/or object_labels be identical for both guaranteed
+        # Here we are making do by ensuring that if there is any difference, all "required" classes get counted
+        
+        # Best case scenario, use class_list provided for the ground_truth
+        class_labels += gt['ground_truth']['class_list'] if 'class_list' in gt['ground_truth'] 
+        # Next best case, use the object labels defined for the environments
+        else gt['environment']['object_labels'] if 'object_labels' in gt['environment'] 
+        # Worst case, extract the classes for each object in the current ground_truth file
+        else [gt_obj['class'] for gt_object_set in gt]
+
+        # Add any synonyms that are provided in the ground_truth
+        # NOTE this will overwrite any of the default background synonyms
+        synonyms = {**synonyms, **gt['ground_truth']['synonyms']} if 'synonyms' in gt['ground_truth']
+        else {**synonyms}
+
+    
+    class_labels = list(np.unique(class_labels))
     print("class_labels: {}".format(class_labels))
-    if 'synonyms' in ground_truths[0]['ground_truth']:
-        input_processor = InputProcessor(class_labels, ground_truths[0]['ground_truth']['synonyms'])
-    else:
-        input_processor = InputProcessor(class_labels)
+    input_processor = InputProcessor(class_labels, ground_truths[0]['ground_truth']['synonyms'])
     
     ground_truths = input_processor.process_gt(ground_truths)
     results = input_processor.process_results(results)
