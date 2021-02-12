@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import gmean
 import iou_tools
+from input_processor import InputProcessor
 
 _IOU_TOOL = iou_tools.IoU()
 _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
@@ -54,23 +55,44 @@ def create_scores(task_details,
         }
     }
 
-
 def evaluate(results, ground_truths):
+    # sort out class_ids for all ground_truths and results to ensure consistent ordering
+    # TODO should maybe not just assume that the first ground_truth has the same 
+    # class list (object_labels) as the others
+    # TODO should object_labels be part of ground_truth rather than its own thing?
+    # I thought object_labels was for segmentation visualization
+    if 'object_labels' in ground_truths[0]['environment']:
+        class_labels = ground_truths[0]['environment']['object_labels']
+    else:
+        # Worst case scenario, create class labels list from current object list
+        class_labels = [gt_obj['class'] for gt_object_set in ground_truths for gt_obj in 
+                        gt_object_set['ground_truth']['objects']]
+        
+        class_labels = list(np.unique(class_labels))
+    print("class_labels: {}".format(class_labels))
+    if 'synonyms' in ground_truths[0]['ground_truth']:
+        input_processor = InputProcessor(class_labels, ground_truths[0]['ground_truth']['synonyms'])
+    else:
+        input_processor = InputProcessor(class_labels)
+    
+    ground_truths = input_processor.process_gt(ground_truths)
+    results = input_processor.process_results(results)
+
     return (evaluate_scd if results['task_details']['results_format']
             == 'object_map_with_states' else evaluate_semantic_slam)(
                 results, ground_truths)
 
-
 def evaluate_scd(results, ground_truths):
+    
     gt_changes = ([{
         **o, 'state': 'removed'
-    } for o in ground_truths[0]['ground_truth']['objects'] not in
+    } for o in ground_truths[0]['ground_truth']['objects'] if o not in
                    ground_truths[1]['ground_truth']['objects']] +
                   [{
                       **o, 'state': 'added'
-                  } for o in ground_truths[1]['ground_truth']['objects'] not in
+                  } for o in ground_truths[1]['ground_truth']['objects'] if o not in
                    ground_truths[0]['ground_truth']['objects']])
-    o = OMQ()
+    o = OMQ(scd_mode=True)
     return create_scores(task_details=results['task_details'],
                          environment_details=results['environment_details'],
                          scores_omq=o.score([(gt_changes,
@@ -82,7 +104,6 @@ def evaluate_scd(results, ground_truths):
 
 
 def evaluate_semantic_slam(results, ground_truths):
-    print(ground_truths[0]['ground_truth']['objects'][0])
     o = OMQ()
     return create_scores(task_details=results['task_details'],
                          environment_details=results['environment_details'],
