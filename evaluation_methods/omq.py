@@ -55,32 +55,42 @@ def create_scores(task_details,
         }
     }
 
+
 def evaluate(results, ground_truths):
     class_labels = []
     synonyms = _BACKGROUND_SYNONYMS
     for gt in ground_truths:
-        
-        # sort out class_ids for all ground_truths and results to ensure consistent ordering
-        # NOTE Ideally we would want to have class_list and/or object_labels be identical for both guaranteed
-        # Here we are making do by ensuring that if there is any difference, all "required" classes get counted
-        
-        # Best case scenario, use class_list provided for the ground_truth
-        class_labels += gt['ground_truth']['class_list'] if 'class_list' in gt['ground_truth'] 
-        # Next best case, use the object labels defined for the environments
-        else gt['environment']['object_labels'] if 'object_labels' in gt['environment'] 
-        # Worst case, extract the classes for each object in the current ground_truth file
-        else [gt_obj['class'] for gt_object_set in gt]
+        # sort out class_ids for all ground_truths and results to ensure
+        # consistent ordering
+        # NOTE Ideally we would want to have class_list and/or object_labels be
+        # identical for both guaranteed Here we are making do by ensuring that
+        # if there is any difference, all "required" classes get counted
+        class_labels += (
+            # Best case scenario, use class_list provided for the ground_truth
+            gt['ground_truth']['class_list']
+            if 'class_list' in gt['ground_truth']
+            # Next best case, use the object labels defined for the
+            # environments
+            else gt['environment']['object_labels']
+            if 'object_labels' in gt['environment']
+            # Worst case, extract the classes for each object in the current
+            # ground_truth file
+            else [gt_obj['class'] for gt_object_set in gt])
 
         # Add any synonyms that are provided in the ground_truth
         # NOTE this will overwrite any of the default background synonyms
-        synonyms = {**synonyms, **gt['ground_truth']['synonyms']} if 'synonyms' in gt['ground_truth']
-        else {**synonyms}
+        synonyms = ({
+            **synonyms,
+            **gt['ground_truth']['synonyms']
+        } if 'synonyms' in gt['ground_truth'] else {
+            **synonyms
+        })
 
-    
     class_labels = list(np.unique(class_labels))
     print("class_labels: {}".format(class_labels))
-    input_processor = InputProcessor(class_labels, ground_truths[0]['ground_truth']['synonyms'])
-    
+    input_processor = InputProcessor(
+        class_labels, ground_truths[0]['ground_truth']['synonyms'])
+
     ground_truths = input_processor.process_gt(ground_truths)
     results = input_processor.process_results(results)
 
@@ -88,16 +98,17 @@ def evaluate(results, ground_truths):
             == 'object_map_with_states' else evaluate_semantic_slam)(
                 results, ground_truths)
 
+
 def evaluate_scd(results, ground_truths):
-    
+
     gt_changes = ([{
         **o, 'state': 'removed'
-    } for o in ground_truths[0]['ground_truth']['objects'] if o not in
-                   ground_truths[1]['ground_truth']['objects']] +
+    } for o in ground_truths[0]['ground_truth']['objects']
+                   if o not in ground_truths[1]['ground_truth']['objects']] +
                   [{
                       **o, 'state': 'added'
-                  } for o in ground_truths[1]['ground_truth']['objects'] if o not in
-                   ground_truths[0]['ground_truth']['objects']])
+                  } for o in ground_truths[1]['ground_truth']['objects']
+                   if o not in ground_truths[0]['ground_truth']['objects']])
     o = OMQ(scd_mode=True)
     return create_scores(task_details=results['task_details'],
                          environment_details=results['environment_details'],
