@@ -87,7 +87,6 @@ def evaluate(results, ground_truths):
         })
 
     class_labels = list(np.unique(class_labels))
-    print("class_labels: {}".format(class_labels))
     input_processor = InputProcessor(
         class_labels, ground_truths[0]['ground_truth']['synonyms'])
 
