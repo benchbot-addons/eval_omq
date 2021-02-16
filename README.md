@@ -2,17 +2,19 @@
 
 This add-on contains an implementation of the Object Map Quality (OMQ) method for numerically evaluating the quality of an object map with respect to another ground truth object map.
 
-The implementation is in Python, and is used through the `benchbot_eval` script.
+The implementation is in Python, and is used through either the [`benchbot_eval`](https://github.com/qcr/benchbot) script or [BenchBot Evaluation Python package](https://github.com/qcr/benchbot_eval).
 
 ## Using the add-on
-Results are submitted for OMQ evaluation in either `object_map` or `object_map_with_states` format for evaluating Semantic SLAM and Scene Change Detection (SCD) tasks respectively.
-Ground-truth for an environment is to be provided in `object_map_ground_truth` format.
+
+Results are submitted for OMQ evaluation in either the `object_map` or `object_map_with_states` format, for Semantic SLAM and Scene Change Detection (SCD) tasks respectively.
+Ground-truth for an environment is to be provided in the `object_map_ground_truth` format.
 
 For full details on these formats please see the [`formats_object_map` documentation](https://github.com/benchbot-addons/formats_object_map).
 
 Evaluation is performed using the `evaluate` function and results are combined using the `combine` function.
 
 **Important notes on submitted results:**
+
 - Support is given for class name synonyms if a matching synonym has been defined in the submitted ground truth and is present in the results `class_list`.
 - Any class names given in the results `class_list` that are not present in the ground truth `class_list` & don't have an appropriate synonym, will have their probability added to the `'background'` class (this avoids over-weighting label predictions solely because your detector had classes that were not supported)
 - all probability distributions in the results (`label_probs` and `state_probs`) are normalized if their total probability is greater than 1 or have the missing probability added to `'background'` or `'unchanged'` classes if it is less than 1.
@@ -23,19 +25,21 @@ Object map quality compares the object cuboids of a ground-truth object-based se
 
 The steps for calculating OMQ for a generated object-based semantic map are as follows:
 
-1. Compare each object in the generated map to all ground-truth objects, by calculating a *pairwise object quality* score for each pair. The pairwise object quality is the geometric mean of all object sub-qualities. Standard OMQ has two object sub-quality scores:
-    - *spatial quality* is the 3D IoU of the ground-truth and generated cuboids being compared
-    - *label quality* is the probability assigned to the class label of the ground-truth object being compared to
+1. Compare each object in the generated map to all ground-truth objects, by calculating a _pairwise object quality_ score for each pair. The pairwise object quality is the geometric mean of all object sub-qualities. Standard OMQ has two object sub-quality scores:
 
-    Note that the pairwise object quality will be zero if either sub-quality score is zero - like when there is no overlap between object cuboids.
+   - _spatial quality_ is the 3D IoU of the ground-truth and generated cuboids being compared
+   - _label quality_ is the probability assigned to the class label of the ground-truth object being compared to
 
-2. Each object in the generated map is assigned the ground-truth object with the highest non-zero pairwise quality, establishing the *"true positives"* (some non-zero quality), *false negatives* (ground-truth objects with no pairwise quality match), and *false positives* (objects in the generated map with no pairwise quality match).
+   Note that the pairwise object quality will be zero if either sub-quality score is zero - like when there is no overlap between object cuboids.
 
-3. A *false positive cost*, defined as the maximum confidence given to a non-background class, is given for all false positive objects in the generated map
+2. Each object in the generated map is assigned the ground-truth object with the highest non-zero pairwise quality, establishing the _"true positives"_ (some non-zero quality), _false negatives_ (ground-truth objects with no pairwise quality match), and _false positives_ (objects in the generated map with no pairwise quality match).
+
+3. A _false positive cost_, defined as the maximum confidence given to a non-background class, is given for all false positive objects in the generated map
 
 4. Overall OMQ score is calculated as the sum of all "true positive" qualities divided by the sum of: number of "true positives", number of false negatives, & total false positive cost
 
 Notes:
+
 - Average pairwise qualities for the set of "true positive" objects are often also provided with the overall OMQ score. Average pairwise qualities include an average overall quality, as well as averages for each of the object sub-qualities (spatial & label for standard OMQ)
 - False positive cost is given as a summary statistic as false positive quality (1 - cost) where a high quality score means the false positives were largely ignored as they were low confidence
 - OMQ is based on the probabilistic object detection quality measure PDQ, which is described in [our paper](http://openaccess.thecvf.com/content_WACV_2020/papers/Hall_Probabilistic_Object_Detection_Definition_and_Evaluation_WACV_2020_paper.pdf) and [accompanying code](https://github.com/david2611/pdq_evaluation)).
