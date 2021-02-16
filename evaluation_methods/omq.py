@@ -11,7 +11,7 @@ _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
 
 
 def combine(scores):
-    return create_scores(
+    return (create_scores(
         task_details=scores[0]['task_details'],
         environment_details=[s['environment_details'] for s in scores],
         scores_omq=np.mean([s['scores']['OMQ'] for s in scores]),
@@ -22,9 +22,16 @@ def combine(scores):
             [s['scores']['avg_spatial'] for s in scores]),
         scores_avg_fp_quality=np.mean(
             [s['scores']['avg_fp_quality'] for s in scores]),
-        scores_avg_state_quality=(np.mean([
-            s['scores']['avg_state_quality'] for s in scores
-        ]) if 'avg_state_quality' in scores[0]['scores'] else None))
+        scores_avg_state_quality=(
+            np.mean([s['scores']['avg_state_quality'] for s in scores])
+            if 'avg_state_quality' in scores[0]['scores'] else None))
+            if scores else create_scores(task_details={},
+                                         environment_details=[],
+                                         scores_omq=0.0,
+                                         scores_avg_pairwise=0.0,
+                                         scores_avg_label=0.0,
+                                         scores_avg_spatial=0.0,
+                                         scores_avg_fp_quality=0.0))
 
 
 def create_scores(task_details,
