@@ -11,6 +11,16 @@ _STATE_IDS = {"added": 0, "removed": 1, "constant": 2}
 
 
 def combine(scores):
+    # Handle no scores and empty scores
+    scores = scores if scores else [{}]
+    avg_state = (0.0 if any(
+        'scores' in s and 'avg_state_quality' in s['scores']
+        for s in scores) else None)
+    scores = [
+        s if s else empty_score(avg_state_quality=avg_state) for s in scores
+    ]
+
+    # Return an aggregation score
     return (create_scores(
         task_details=scores[0]['task_details'],
         environment_details=[s['environment_details'] for s in scores],
@@ -61,6 +71,17 @@ def create_scores(task_details,
                })
         }
     }
+
+
+def empty_score(avg_state_quality=None):
+    return create_scores(task_details={},
+                         environment_details=[],
+                         scores_omq=0.0,
+                         scores_avg_pairwise=0.0,
+                         scores_avg_label=0.0,
+                         scores_avg_spatial=0.0,
+                         scores_avg_fp_quality=0.0,
+                         scores_avg_state_quality=avg_state_quality)
 
 
 def evaluate(results, ground_truths):
